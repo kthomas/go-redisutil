@@ -43,12 +43,11 @@ func init() {
 		}
 	}
 	log = logger.NewLogger("go-redisutil", lvl, true)
-
-	requireRedis()
-	requireRedisConn()
 }
 
-func requireRedis() {
+// RequireRedis reads the environment and initializes the configured
+// redis client or cluster client
+func RequireRedis() {
 	redisHosts = make([]string, 0)
 	redsyncPools = make([]redsync.Pool, 0)
 
@@ -64,6 +63,8 @@ func requireRedis() {
 	if os.Getenv("REDIS_PASSWORD") != "" {
 		redisPassword = os.Getenv("REDIS_PASSWORD")
 	}
+
+	requireRedisConn()
 }
 
 func requireRedisConn() {
