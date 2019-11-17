@@ -40,14 +40,14 @@ func Set(key string, val interface{}, ttl *time.Duration) error {
 	if RedisClusterClient != nil {
 		_, err := RedisClusterClient.Set(key, val, keyttl).Result()
 		if err != nil {
-			log.Warningf("failed to SET key: %s; %s", key)
+			log.Warningf("failed to SET key: %s; %s", key, err.Error())
 			return err
 		}
 		log.Debugf("wrote value to key: %s", key)
 	} else if RedisClient != nil {
 		_, err := RedisClient.Get(key).Result()
 		if err != nil {
-			log.Warningf("failed to GET key: %s", key)
+			log.Warningf("failed to GET key: %s; %s", key, err.Error())
 			return err
 		}
 		log.Debugf("wrote value to key: %s", key)
@@ -63,7 +63,7 @@ func Decrement(key string) (*int64, error) {
 	if RedisClusterClient != nil {
 		valint, err := RedisClusterClient.Decr(key).Result()
 		if err != nil {
-			log.Warningf("failed to DECR key: %s; %s", key)
+			log.Warningf("failed to DECR key: %s; %s", key, err.Error())
 			return nil, err
 		}
 		log.Debugf("decremented value at key: %s", key)
@@ -71,7 +71,7 @@ func Decrement(key string) (*int64, error) {
 	} else if RedisClient != nil {
 		valint, err := RedisClient.Decr(key).Result()
 		if err != nil {
-			log.Warningf("failed to DECRkey: %s", key)
+			log.Warningf("failed to DECRkey: %s; %s", key, err.Error())
 			return nil, err
 		}
 		log.Debugf("decremented value at key: %s", key)
@@ -88,7 +88,7 @@ func Increment(key string) (*int64, error) {
 	if RedisClusterClient != nil {
 		valint, err := RedisClusterClient.Incr(key).Result()
 		if err != nil {
-			log.Warningf("failed to INCR key: %s; %s", key)
+			log.Warningf("failed to INCR key: %s; %s", key, err.Error())
 			return nil, err
 		}
 		log.Debugf("incremented value at key: %s", key)
@@ -96,7 +96,7 @@ func Increment(key string) (*int64, error) {
 	} else if RedisClient != nil {
 		valint, err := RedisClient.Incr(key).Result()
 		if err != nil {
-			log.Warningf("failed to INCR key: %s", key)
+			log.Warningf("failed to INCR key: %s; %s", key, err.Error())
 			return nil, err
 		}
 		log.Debugf("incremented value at key: %s", key)
@@ -113,7 +113,7 @@ func IncrementFloat(key string, delta float64) (*float64, error) {
 	if RedisClusterClient != nil {
 		valflt, err := RedisClusterClient.IncrByFloat(key, delta).Result()
 		if err != nil {
-			log.Warningf("failed to INCRBYFLOAT key: %s; %s", key)
+			log.Warningf("failed to INCRBYFLOAT key: %s; %s", key, err.Error())
 			return nil, err
 		}
 		log.Debugf("incremented value at key: %s", key)
@@ -121,7 +121,7 @@ func IncrementFloat(key string, delta float64) (*float64, error) {
 	} else if RedisClient != nil {
 		valflt, err := RedisClient.IncrByFloat(key, delta).Result()
 		if err != nil {
-			log.Warningf("failed to INCRBYFLOAT key: %s", key)
+			log.Warningf("failed to INCRBYFLOAT key: %s", key, err.Error())
 			return nil, err
 		}
 		log.Debugf("incremented value at key: %s", key)
