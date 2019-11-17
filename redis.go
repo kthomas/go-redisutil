@@ -45,9 +45,9 @@ func Set(key string, val interface{}, ttl *time.Duration) error {
 		}
 		log.Debugf("wrote value to key: %s", key)
 	} else if RedisClient != nil {
-		_, err := RedisClient.Get(key).Result()
+		_, err := RedisClient.Set(key, val, keyttl).Result()
 		if err != nil {
-			log.Warningf("failed to GET key: %s; %s", key, err.Error())
+			log.Warningf("failed to SET key: %s; %s", key, err.Error())
 			return err
 		}
 		log.Debugf("wrote value to key: %s", key)
