@@ -81,22 +81,37 @@ func RequireRedis() {
 
 func requireRedisConn() {
 	if len(redisHosts) == 1 {
-		RedisClient = redis.NewClient(&redis.Options{
-			Addr:     redisHosts[0],
-			DB:       redisDBIndex,
-			Password: redisPassword,
-		})
+		opts := &redis.Options{
+			Addr: redisHosts[0],
+			DB:   redisDBIndex,
+		}
+		if redisPassword != "" {
+			opts.Password = redisPassword
+		}
+		RedisClient = redis.NewClient(opts)
 	} else if len(redisHosts) > 1 {
-		RedisClusterClient = redis.NewClusterClient(&redis.ClusterOptions{
-			Addrs:    redisHosts,
-			Password: redisPassword,
-		})
+		opts := &redis.ClusterOptions{
+			Addrs: redisHosts,
+		}
+		if redisPassword != "" {
+			opts.Password = redisPassword
+		}
+		RedisClusterClient = redis.NewClusterClient(opts)
+	}
+
+	if RedisClient == nil && RedisClusterClient == nil {
+		log.Panicf("failed to establish redis or clustered redis client connection")
 	}
 }
 
 func requireRedsync() {
+	creds := ""
+	if redisPassword != "" {
+		creds = fmt.Sprintf(":%s@", redisPassword)
+	}
+
 	for _, host := range redisHosts {
-		redisURL := fmt.Sprintf("redis://%s:%s/%d", redisPassword, host, redisDBIndex)
+		redisURL := fmt.Sprintf("redis://%s%s/%d", creds, host, redisDBIndex)
 		redsyncPools = append(redsyncPools, &redigo.Pool{
 			MaxIdle:     defaultRedlockMaxIdle,
 			IdleTimeout: defaultRedlockIdleTimeout,
