@@ -43,13 +43,14 @@ func Set(key string, val interface{}, ttl *time.Duration) error {
 			log.Warningf("failed to SET key: %s; %s", key)
 			return err
 		}
+		log.Debugf("wrote value to key: %s", key)
 	} else if RedisClient != nil {
-		valstr, err := RedisClient.Get(key).Result()
+		_, err := RedisClient.Get(key).Result()
 		if err != nil {
 			log.Warningf("failed to GET key: %s", key)
 			return err
 		}
-		val = &valstr
+		log.Debugf("wrote value to key: %s", key)
 	}
 
 	return nil
@@ -65,6 +66,7 @@ func Decrement(key string) (*int64, error) {
 			log.Warningf("failed to DECR key: %s; %s", key)
 			return nil, err
 		}
+		log.Debugf("decremented value at key: %s", key)
 		val = &valint
 	} else if RedisClient != nil {
 		valint, err := RedisClient.Decr(key).Result()
@@ -72,6 +74,7 @@ func Decrement(key string) (*int64, error) {
 			log.Warningf("failed to DECRkey: %s", key)
 			return nil, err
 		}
+		log.Debugf("decremented value at key: %s", key)
 		val = &valint
 	}
 
@@ -88,6 +91,7 @@ func Increment(key string) (*int64, error) {
 			log.Warningf("failed to INCR key: %s; %s", key)
 			return nil, err
 		}
+		log.Debugf("incremented value at key: %s", key)
 		val = &valint
 	} else if RedisClient != nil {
 		valint, err := RedisClient.Incr(key).Result()
@@ -95,6 +99,7 @@ func Increment(key string) (*int64, error) {
 			log.Warningf("failed to INCR key: %s", key)
 			return nil, err
 		}
+		log.Debugf("incremented value at key: %s", key)
 		val = &valint
 	}
 
@@ -111,6 +116,7 @@ func IncrementFloat(key string, delta float64) (*float64, error) {
 			log.Warningf("failed to INCRBYFLOAT key: %s; %s", key)
 			return nil, err
 		}
+		log.Debugf("incremented value at key: %s", key)
 		val = &valflt
 	} else if RedisClient != nil {
 		valflt, err := RedisClient.IncrByFloat(key, delta).Result()
@@ -118,6 +124,7 @@ func IncrementFloat(key string, delta float64) (*float64, error) {
 			log.Warningf("failed to INCRBYFLOAT key: %s", key)
 			return nil, err
 		}
+		log.Debugf("incremented value at key: %s", key)
 		val = &valflt
 	}
 
@@ -133,11 +140,22 @@ func WithRedlock(key string, fn func() error) error {
 		return errors.New("failed to acquire distributed lock; redlock not configured")
 	}
 
+	defer func() {
+		if r := recover(); r != nil {
+			log.Warningf("recovered from failed execution of mutually exclusive callback under lock: %s; %s", key, r)
+		}
+	}()
+
 	mutex := redlock.NewMutex(key)
 	err := mutex.Lock()
 	if err != nil {
 		return fmt.Errorf("failed to acquire distributed lock; %s", err.Error())
 	}
 	defer mutex.Unlock()
-	return fn()
+	err = fn()
+	if err != nil {
+		return fmt.Errorf("failed to execute mutually exclusive callback function under lock: %s; %s", key, err.Error())
+	}
+	log.Debugf("executed mutually exclusive callback function under lock: %s", key)
+	return nil
 }
