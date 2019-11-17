@@ -3,6 +3,7 @@ package redisutil
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -24,6 +25,9 @@ var (
 
 	// RedisHosts is an array of <host>:<port> strings
 	redisHosts []string
+
+	// redisDBIndex is the index of the redis db
+	redisDBIndex int
 
 	// RedisPassword is the redis password
 	redisPassword string
@@ -60,6 +64,14 @@ func RequireRedis() {
 		log.Panicf("failed to parse REDIS_HOSTS from environment")
 	}
 
+	if os.Getenv("REDIS_DB_INDEX") != "" {
+		idx, err := strconv.ParseInt(os.Getenv("REDIS_DB_INDEX"), 10, 8)
+		if err != nil {
+			log.Panicf("failed to parse REDIS_DB_INDEX from environment; %s", err.Error())
+		}
+		redisDBIndex = int(idx)
+	}
+
 	if os.Getenv("REDIS_PASSWORD") != "" {
 		redisPassword = os.Getenv("REDIS_PASSWORD")
 	}
@@ -71,6 +83,7 @@ func requireRedisConn() {
 	if len(redisHosts) == 1 {
 		RedisClient = redis.NewClient(&redis.Options{
 			Addr:     redisHosts[0],
+			DB:       redisDBIndex,
 			Password: redisPassword,
 		})
 	} else if len(redisHosts) > 1 {
@@ -83,8 +96,7 @@ func requireRedisConn() {
 
 func requireRedsync() {
 	for _, host := range redisHosts {
-		// FIXME-- add db path
-		redisURL := fmt.Sprintf("redis://%s:%s", redisPassword, host)
+		redisURL := fmt.Sprintf("redis://%s:%s/%d", redisPassword, host, redisDBIndex)
 		redsyncPools = append(redsyncPools, &redigo.Pool{
 			MaxIdle:     defaultRedlockMaxIdle,
 			IdleTimeout: defaultRedlockIdleTimeout,

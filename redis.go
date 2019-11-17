@@ -19,9 +19,7 @@ func Get(key string) (*string, error) {
 			return nil, err
 		}
 		val = &valstr
-	}
-
-	if RedisClient != nil {
+	} else if RedisClient != nil {
 		valstr, err := RedisClient.Get(key).Result()
 		if err != nil {
 			log.Warningf("failed to GET key: %s; %s", key, err.Error())
@@ -45,9 +43,7 @@ func Set(key string, val interface{}, ttl *time.Duration) error {
 			log.Warningf("failed to SET key: %s; %s", key)
 			return err
 		}
-	}
-
-	if RedisClient != nil {
+	} else if RedisClient != nil {
 		valstr, err := RedisClient.Get(key).Result()
 		if err != nil {
 			log.Warningf("failed to GET key: %s", key)
@@ -70,9 +66,7 @@ func Decrement(key string) (*int64, error) {
 			return nil, err
 		}
 		val = &valint
-	}
-
-	if RedisClient != nil {
+	} else if RedisClient != nil {
 		valint, err := RedisClient.Decr(key).Result()
 		if err != nil {
 			log.Warningf("failed to DECRkey: %s", key)
@@ -95,9 +89,7 @@ func Increment(key string) (*int64, error) {
 			return nil, err
 		}
 		val = &valint
-	}
-
-	if RedisClient != nil {
+	} else if RedisClient != nil {
 		valint, err := RedisClient.Incr(key).Result()
 		if err != nil {
 			log.Warningf("failed to INCR key: %s", key)
@@ -120,9 +112,7 @@ func IncrementFloat(key string, delta float64) (*float64, error) {
 			return nil, err
 		}
 		val = &valflt
-	}
-
-	if RedisClient != nil {
+	} else if RedisClient != nil {
 		valflt, err := RedisClient.IncrByFloat(key, delta).Result()
 		if err != nil {
 			log.Warningf("failed to INCRBYFLOAT key: %s", key)
