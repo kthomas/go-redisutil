@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/go-redsync/redsync"
 )
 
 const defaultTTL = time.Hour * 24
@@ -140,22 +142,33 @@ func WithRedlock(key string, fn func() error) error {
 		return errors.New("failed to acquire distributed lock; redlock not configured")
 	}
 
+	var mutex *redsync.Mutex
+
 	defer func() {
 		if r := recover(); r != nil {
 			log.Warningf("recovered from failed execution of mutually exclusive callback under lock: %s; %s", key, r)
+			if mutex != nil {
+				mutex.Unlock()
+			}
 		}
 	}()
 
-	mutex := redlock.NewMutex(key)
+	mutex = redlock.NewMutex(fmt.Sprintf("mutex.%s", key))
+	defer mutex.Unlock()
+
 	err := mutex.Lock()
 	if err != nil {
-		return fmt.Errorf("failed to acquire distributed lock; %s", err.Error())
+		log.Warningf("failed to acquire distributed lock; %s", err.Error())
+		return err
 	}
-	defer mutex.Unlock()
+
+	log.Debugf("attempting to execute mutually exclusive callback function under lock: %s", key)
 	err = fn()
 	if err != nil {
-		return fmt.Errorf("failed to execute mutually exclusive callback function under lock: %s; %s", key, err.Error())
+		log.Warningf("failed to execute mutually exclusive callback function under lock: %s; %s", key, err.Error())
+		return err
 	}
+
 	log.Debugf("executed mutually exclusive callback function under lock: %s", key)
 	return nil
 }
