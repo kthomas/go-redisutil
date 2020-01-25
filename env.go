@@ -77,6 +77,7 @@ func RequireRedis() {
 	}
 
 	requireRedisConn()
+	requireRedsync()
 }
 
 func requireRedisConn() {
