@@ -165,7 +165,6 @@ func WithRedlock(key string, fn func() error) error {
 	log.Debugf("attempting to execute mutually exclusive callback function under lock: %s", key)
 	err = fn()
 	if err != nil {
-		log.Warningf("failed to execute mutually exclusive callback function under lock: %s; %s", key, err.Error())
 		return err
 	}
 
