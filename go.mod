@@ -7,7 +7,7 @@ require (
 	github.com/go-redsync/redsync v1.3.1
 	github.com/gomodule/redigo v2.0.0+incompatible
 	github.com/google/logger v1.0.1 // indirect
-	github.com/kthomas/go-logger v0.0.0-20200602041232-5c46e0cab608
+	github.com/kthomas/go-logger v0.0.0-20200602072946-d7d72dfc2531
 	github.com/onsi/ginkgo v1.10.3 // indirect
 	github.com/onsi/gomega v1.7.1 // indirect
 )
