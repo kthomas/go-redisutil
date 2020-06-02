@@ -46,7 +46,12 @@ func init() {
 			lvl = "INFO"
 		}
 	}
-	log = logger.NewLogger("go-redisutil", lvl, true)
+	var endpoint *string
+	if os.Getenv("SYSLOG_ENDPOINT") != "" {
+		endpt := os.Getenv("SYSLOG_ENDPOINT")
+		endpoint = &endpt
+	}
+	log = logger.NewLogger("go-redisutil", lvl, endpoint)
 }
 
 // RequireRedis reads the environment and initializes the configured
