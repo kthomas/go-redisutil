@@ -17,14 +17,14 @@ func Get(key string) (*string, error) {
 	if RedisClusterClient != nil {
 		valstr, err := RedisClusterClient.Get(key).Result()
 		if err != nil {
-			log.Warningf("failed to GET key: %s", key, err.Error())
+			log.Debugf("redis GET returned no object for key: %s; %s", key, err.Error())
 			return nil, err
 		}
 		val = &valstr
 	} else if RedisClient != nil {
 		valstr, err := RedisClient.Get(key).Result()
 		if err != nil {
-			log.Warningf("failed to GET key: %s; %s", key, err.Error())
+			log.Debugf("redis GET returned no object for key: %s; %s", key, err.Error())
 			return nil, err
 		}
 		val = &valstr
@@ -42,17 +42,17 @@ func Set(key string, val interface{}, ttl *time.Duration) error {
 	if RedisClusterClient != nil {
 		_, err := RedisClusterClient.Set(key, val, keyttl).Result()
 		if err != nil {
-			log.Warningf("failed to SET key: %s; %s", key, err.Error())
+			log.Warningf("redis SET failed for key: %s; %s", key, err.Error())
 			return err
 		}
 		log.Debugf("wrote value to key: %s", key)
 	} else if RedisClient != nil {
 		_, err := RedisClient.Set(key, val, keyttl).Result()
 		if err != nil {
-			log.Warningf("failed to SET key: %s; %s", key, err.Error())
+			log.Warningf("redis SET failed for key: %s; %s", key, err.Error())
 			return err
 		}
-		log.Debugf("wrote value to key: %s", key)
+		log.Debugf("redis SET value for key: %s", key)
 	}
 
 	return nil
@@ -65,18 +65,18 @@ func Decrement(key string) (*int64, error) {
 	if RedisClusterClient != nil {
 		valint, err := RedisClusterClient.Decr(key).Result()
 		if err != nil {
-			log.Warningf("failed to DECR key: %s; %s", key, err.Error())
+			log.Warningf("redis DECR failed for key: %s; %s", key, err.Error())
 			return nil, err
 		}
-		log.Debugf("decremented value at key: %s", key)
+		log.Debugf("redis atomically decremented value at key: %s", key)
 		val = &valint
 	} else if RedisClient != nil {
 		valint, err := RedisClient.Decr(key).Result()
 		if err != nil {
-			log.Warningf("failed to DECRkey: %s; %s", key, err.Error())
+			log.Warningf("redis DECR failed for key: %s; %s", key, err.Error())
 			return nil, err
 		}
-		log.Debugf("decremented value at key: %s", key)
+		log.Debugf("redis atomically decremented value for key: %s", key)
 		val = &valint
 	}
 
@@ -90,18 +90,18 @@ func Increment(key string) (*int64, error) {
 	if RedisClusterClient != nil {
 		valint, err := RedisClusterClient.Incr(key).Result()
 		if err != nil {
-			log.Warningf("failed to INCR key: %s; %s", key, err.Error())
+			log.Warningf("redis INCR failed for key: %s; %s", key, err.Error())
 			return nil, err
 		}
-		log.Debugf("incremented value at key: %s", key)
+		log.Debugf("redis atomically incremented value for key: %s", key)
 		val = &valint
 	} else if RedisClient != nil {
 		valint, err := RedisClient.Incr(key).Result()
 		if err != nil {
-			log.Warningf("failed to INCR key: %s; %s", key, err.Error())
+			log.Warningf("redis INCR failed for key: %s; %s", key, err.Error())
 			return nil, err
 		}
-		log.Debugf("incremented value at key: %s", key)
+		log.Debugf("redis atomically incremented value for key: %s", key)
 		val = &valint
 	}
 
@@ -115,18 +115,18 @@ func IncrementFloat(key string, delta float64) (*float64, error) {
 	if RedisClusterClient != nil {
 		valflt, err := RedisClusterClient.IncrByFloat(key, delta).Result()
 		if err != nil {
-			log.Warningf("failed to INCRBYFLOAT key: %s; %s", key, err.Error())
+			log.Warningf("redis INCRBYFLOAT failed for key: %s; %s", key, err.Error())
 			return nil, err
 		}
-		log.Debugf("incremented value at key: %s", key)
+		log.Debugf("redis atomically incremented float value for key: %s", key)
 		val = &valflt
 	} else if RedisClient != nil {
 		valflt, err := RedisClient.IncrByFloat(key, delta).Result()
 		if err != nil {
-			log.Warningf("failed to INCRBYFLOAT key: %s", key, err.Error())
+			log.Warningf("redis INCRBYFLOAT failed for key: %s; %s", key, err.Error())
 			return nil, err
 		}
-		log.Debugf("incremented value at key: %s", key)
+		log.Debugf("redis atomically incremented float value for key: %s", key)
 		val = &valflt
 	}
 
@@ -139,35 +139,36 @@ func IncrementFloat(key string, delta float64) (*float64, error) {
 // since it can be related to lock acquisition or internal callback execution
 func WithRedlock(key string, fn func() error) error {
 	if redlock == nil {
-		return errors.New("failed to acquire distributed lock; redlock not configured")
+		return errors.New("redis failed to acquire distributed lock; redlock not configured")
 	}
 
 	var mutex *redsync.Mutex
 
 	defer func() {
 		if r := recover(); r != nil {
-			log.Warningf("recovered from failed execution of mutually exclusive callback under lock: %s; %s", key, r)
+			log.Warningf("recovered from failed execution of callback under mutual exclusion lock: %s; %s", key, r)
 			if mutex != nil {
 				mutex.Unlock()
 			}
 		}
 	}()
 
-	mutex = redlock.NewMutex(fmt.Sprintf("mutex.%s", key))
+	mkey := fmt.Sprintf("mutex.%s", key)
+	mutex = redlock.NewMutex(mkey)
 	defer mutex.Unlock()
 
 	err := mutex.Lock()
 	if err != nil {
-		log.Warningf("failed to acquire distributed lock; %s", err.Error())
+		log.Warningf("redis failed to acquire distributed lock for key: %s; %s", mkey, err.Error())
 		return err
 	}
 
-	log.Debugf("attempting to execute mutually exclusive callback function under lock: %s", key)
+	log.Debugf("redis attempting to execute callback function under mutual exclusion lock: %s", mkey)
 	err = fn()
 	if err != nil {
 		return err
 	}
 
-	log.Debugf("executed mutually exclusive callback function under lock: %s", key)
+	log.Debugf("redis executed callback function under mutual exclusion lock: %s", mkey)
 	return nil
 }
